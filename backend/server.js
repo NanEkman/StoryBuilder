@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const { supabase } = require('./src/lib/supabaseClient')
+const bcrypt = require('bcryptjs')
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -11,6 +12,16 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Simple request logger to help debug frontend requests
+app.use((req, res, next) => {
+  console.log(`[REQ] ${req.method} ${req.url}`)
+  if (req.method === 'POST' || req.method === 'PUT') {
+    // log small bodies only
+    try { console.log('[BODY]', JSON.stringify(req.body).slice(0, 1000)) } catch (e) {}
+  }
+  next()
+})
 
 // Health
 app.get('/health', async (req, res) => {
@@ -130,6 +141,68 @@ app.post('/api/stories/:id/continue', async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 });
+
+// Register user
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!email || !password) return res.status(400).json({ error: 'Email och lösenord krävs' })
+    if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ error: 'Lösenord måste vara minst 6 tecken' })
+
+    // check existing
+    const { data: existing, error: selErr } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (selErr) throw selErr
+    if (existing) return res.status(409).json({ error: 'Användare med denna email finns redan' })
+
+    const hashed = await bcrypt.hash(password, 8)
+    const id = uuidv4()
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ id, email, password_hash: hashed }])
+      .select('id, email, created_at')
+      .single()
+
+    if (error) throw error
+    res.status(201).json(data)
+  } catch (error) {
+    console.error('Auth error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Login user
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+    if (!email || !password) return res.status(400).json({ error: 'Email och lösenord krävs' })
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!user) return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' })
+
+    const match = await bcrypt.compare(password, user.password_hash)
+    if (!match) return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' })
+
+    // return basic user info (no token for now)
+    const { password_hash, ...safeUser } = user
+    res.json({ user: safeUser })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
 
 // Error handling
 app.use((err, req, res, next) => {
