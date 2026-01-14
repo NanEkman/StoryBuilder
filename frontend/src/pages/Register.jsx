@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import axios from 'axios'
+import { supabase } from '../lib/supabaseClient'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
+import { useNavigate } from 'react-router-dom'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 export default function Register() {
   const [email, setEmail] = useState('')
@@ -12,6 +12,7 @@ export default function Register() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -23,12 +24,14 @@ export default function Register() {
 
     try {
       setLoading(true)
-      const res = await axios.post(`${API_URL}/api/register`, { email, password })
-      setSuccess('Registrering lyckades — du kan nu logga in')
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) throw error
+      setSuccess('Registrering lyckades — kontrollera din email om bekräftelse krävs')
       setEmail('')
       setPassword('')
+      setTimeout(() => navigate('/login'), 900)
     } catch (err) {
-      setError(err?.response?.data?.error || 'Ett fel uppstod')
+      setError(err?.message || err?.error || 'Ett fel uppstod')
     } finally {
       setLoading(false)
     }
