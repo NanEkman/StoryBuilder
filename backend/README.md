@@ -27,6 +27,19 @@ GRANT ALL PRIVILEGES ON DATABASE storybuilder TO storybuilder_user;
 npm run migrate
 ```
 
+### Alternativ: kör SQL manuellt i Supabase
+
+Om `npm run migrate` inte kan köras från din miljö (t.ex. nätverks-/DNS-problem), kör SQL manuellt i Supabase:
+
+1. Öppna Supabase → SQL Editor → New query
+2. Klistra in filen `migrations/create_stories.sql` och kör
+
+Eller kör lokalt med `psql`:
+
+```bash
+psql "$DATABASE_URL" -f migrations/create_stories.sql
+```
+
 ## Starta server
 
 ```bash
