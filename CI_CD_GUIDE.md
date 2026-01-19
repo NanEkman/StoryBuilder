@@ -1,5 +1,41 @@
 # 🚀 CI/CD Setup Guide - Story Builder
 
+## 👥 Snabbstart för utvecklare
+
+### Vad behöver JU veta?
+
+**Kortfattat:** Varje gång du pushar kod testar GitHub Actions automatiskt att allt fungerar. Om något är fel får du ett felmeddelande på GitHub.
+
+### Din workflow:
+
+```
+1. Du skriver kod lokalt
+2. git add . && git commit -m "..." && git push
+3. GitHub Actions testar automatiskt (2-3 minuter)
+4. Du ser resultat på github.com/StoryBuilder/actions
+5. Om grön (✅): Allt OK, du kan merga
+6. Om röd (❌): Se felmeddelandet, fixa lokalt, pusha igen
+```
+
+### Viktiga regler:
+
+| ✅ GÖR | ❌ GÖR INTE |
+|--------|-----------|
+| Pusha ofta | Force-push till main |
+| Läs GitHub Actions-fel | Committa .env eller lösenord |
+| Fixa innan merge | Committa node_modules/ |
+| Starta PR före merge | Ignorera röda checks |
+
+### Mina workflow-status:
+
+- **CI - Backend & Frontend Tests** → Testar build + syntax
+- **Deploy to Production** → Förberedelse för produktionsrelease
+- **Security - CodeQL** → Söker säkerhetshål (veckovis + push)
+
+👉 **Se status:** https://github.com/NanEkman/StoryBuilder/actions
+
+---
+
 ## Vad är CI/CD?
 
 **CI (Continuous Integration)** = Automatisk testning och bygge vid varje push
