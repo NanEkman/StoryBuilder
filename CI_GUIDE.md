@@ -19,12 +19,12 @@
 
 ### Viktiga regler:
 
-| ✅ GÖR | ❌ GÖR INTE |
-|--------|-----------|
-| Pusha ofta | Force-push till main |
+| ✅ GÖR                 | ❌ GÖR INTE                  |
+| ---------------------- | ---------------------------- |
+| Pusha ofta             | Force-push till main         |
 | Läs GitHub Actions-fel | Committa .env eller lösenord |
-| Fixa innan merge | Committa node_modules/ |
-| Starta PR före merge | Ignorera röda checks |
+| Fixa innan merge       | Committa node_modules/       |
+| Starta PR före merge   | Ignorera röda checks         |
 
 ### Mina workflow-status:
 
