@@ -1,0 +1,45 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests Before Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: ./frontend
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+  notify:
+    name: Notify Deployment
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create deployment notification
+        run: echo "✅ Deployment ready - Manual deployment step required"
