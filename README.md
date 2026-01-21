@@ -49,6 +49,22 @@ npm install
 npm run dev
 ```
 
+Environment
+- Kopiera `backend/.env.example` till `backend/.env` och fyll i `SUPABASE_URL` och `SUPABASE_SERVICE_ROLE_KEY` från ditt Supabase-projekt.
+- Frontend: skapa en `.env` eller `.env.local` i `frontend/` med följande variabler:
+
+
+Shadcn UI
+- Jag har lagt in shadcn-liknande komponenter (`Button`, `Input`, `Card`) i `frontend/src/components/ui`.
+- För att använda officiella shadcn-komponenter lokalt kör:
+
+```bash
+cd frontend
+npx shadcn-ui init
+npx shadcn-ui add button input card
+```
+
+
 API (huvudendpoints)
 - `GET /health` — health check
 - `GET /api/stories` — hämta alla berättelser

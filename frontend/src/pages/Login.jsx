@@ -1,17 +1,17 @@
 import React, { useState } from 'react'
-import axios from 'axios'
+import { supabase } from '../lib/supabaseClient'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
+import { useNavigate } from 'react-router-dom'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
-export default function Login() {
+export default function Login({ setUser }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [user, setUser] = useState(null)
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,10 +21,13 @@ export default function Login() {
 
     try {
       setLoading(true)
-      const res = await axios.post(`${API_URL}/api/login`, { email, password })
-      setUser(res.data.user)
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      // data.session is created and persisted by Supabase client; user available in data.user
+      if (data?.user && setUser) setUser(data.user)
+      navigate('/')
     } catch (err) {
-      setError(err?.response?.data?.error || 'Ett fel uppstod')
+      setError(err?.message || err?.error || 'Ett fel uppstod')
     } finally {
       setLoading(false)
     }
@@ -35,17 +38,11 @@ export default function Login() {
       <Card className="max-w-md w-full">
         <h1 className="text-2xl font-bold mb-4">Logga in</h1>
         {error && <div className="text-red-600 mb-2">{error}</div>}
-        {user ? (
-          <div>
-            <p className="text-green-600 mb-2">Inloggning lyckades: {user.email}</p>
-          </div>
-        ) : (
           <form onSubmit={handleSubmit}>
             <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <Input label="Lösenord" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
             <Button type="submit" disabled={loading} className="w-full">{loading ? 'Loggar in...' : 'Logga in'}</Button>
           </form>
-        )}
       </Card>
     </div>
   )

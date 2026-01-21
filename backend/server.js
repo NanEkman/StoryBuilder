@@ -4,7 +4,6 @@ const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const { supabase } = require('./src/lib/supabaseClient')
-const bcrypt = require('bcryptjs')
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -142,64 +141,37 @@ app.post('/api/stories/:id/continue', async (req, res) => {
   }
 });
 
-// Register user
-app.post('/api/register', async (req, res) => {
+// Verify Supabase access token middleware
+async function verifySupabaseToken(req, res, next) {
   try {
-    const { email, password } = req.body
+    const auth = req.headers.authorization || ''
+    const parts = auth.split(' ')
+    if (parts.length !== 2 || parts[0] !== 'Bearer') return res.status(401).json({ error: 'Token saknas eller fel format' })
+    const token = parts[1]
 
-    if (!email || !password) return res.status(400).json({ error: 'Email och lösenord krävs' })
-    if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ error: 'Lösenord måste vara minst 6 tecken' })
-
-    // check existing
-    const { data: existing, error: selErr } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle()
-
-    if (selErr) throw selErr
-    if (existing) return res.status(409).json({ error: 'Användare med denna email finns redan' })
-
-    const hashed = await bcrypt.hash(password, 8)
-    const id = uuidv4()
-
-    const { data, error } = await supabase
-      .from('users')
-      .insert([{ id, email, password_hash: hashed }])
-      .select('id, email, created_at')
-      .single()
-
-    if (error) throw error
-    res.status(201).json(data)
-  } catch (error) {
-    console.error('Auth error:', error)
-    res.status(500).json({ error: error.message })
+    // Use Supabase auth to get user from access token
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error) {
+      console.warn('Supabase getUser error', error)
+      return res.status(401).json({ error: 'Ogiltig eller utgången token' })
+    }
+    if (!data || !data.user) return res.status(401).json({ error: 'Ogiltig token' })
+    req.user = data.user
+    next()
+  } catch (err) {
+    console.error('verifySupabaseToken error', err)
+    return res.status(500).json({ error: 'Autentiseringsfel' })
   }
-})
+}
 
-// Login user
-app.post('/api/login', async (req, res) => {
+// Get current user from Supabase token
+app.get('/api/me', verifySupabaseToken, async (req, res) => {
   try {
-    const { email, password } = req.body
-    if (!email || !password) return res.status(400).json({ error: 'Email och lösenord krävs' })
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle()
-
-    if (error) throw error
-    if (!user) return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' })
-
-    const match = await bcrypt.compare(password, user.password_hash)
-    if (!match) return res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' })
-
-    // return basic user info (no token for now)
-    const { password_hash, ...safeUser } = user
-    res.json({ user: safeUser })
+    const user = req.user
+    if (!user) return res.status(401).json({ error: 'Ogiltig token' })
+    res.json({ user: { id: user.id, email: user.email, aud: user.aud } })
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Me error:', error)
     res.status(500).json({ error: error.message })
   }
 })

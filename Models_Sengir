@@ -1,0 +1,47 @@
+# users
+· id
+· Username
+· role (admin, user)
+· avatar_url
+· created_at
+
+
+#groups
+· id
+· name Titel på genre eller storyn beroende på hur parent group id sätts
+· description Beskrivning av genre eller storyn beroende på hur parent group id sätts
+· created_by
+· created_at
+· parent_group_id (nullable) om null så är det en genre annars kopplas den till genre id
+
+
+#group_members
+· id
+· group_id
+· user_id
+· role (owner, member)
+· joined_at
+
+#story_segments
+Varje stafett-del.
+· id
+· story_id
+· user_id
+· content (text)
+· order_index
+· created_at
+
+#reports
+För anmälningar.
+· id
+· story_segment_id
+· reported_by
+· reason
+· created_at
+· status (pending, reviewed, dismissed)
+
+#published_stories
+· id
+· group_id (story-gruppen)
+· published_by
+· published_at
