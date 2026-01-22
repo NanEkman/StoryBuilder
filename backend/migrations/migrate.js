@@ -40,46 +40,26 @@ const createTables = async () => {
 
     console.log('Skapar databastabeller...')
 
-    // Drop existing table if it exists (för utveckling) — only if FORCE_DROP=true
-    if (process.env.FORCE_DROP === 'true') {
-      console.log('Dropping existing `stories` table because FORCE_DROP=true')
-      await pool.query('DROP TABLE IF EXISTS stories CASCADE')
-    } else {
-      console.log('Skipping DROP TABLE (set FORCE_DROP=true to enable)')
-    }
-
-    // Create stories table
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS stories (
-        id UUID PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        turns INTEGER DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `)
-
-    console.log('Databastabeller skapade framgångsrikt!')
-
-    // Create indexes for performance
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_stories_updated_at ON stories(updated_at DESC);
-    `)
-
-    console.log('Index skapade framgångsrikt!')
-
     // Create users table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username VARCHAR(255) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT now()
       );
     `)
 
     console.log('Users table created successfully!')
+
+    // Create indexes for performance
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+    `)
+
+    console.log('Index skapade framgångsrikt!')
 
     await pool.end()
     process.exit(0)

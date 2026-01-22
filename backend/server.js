@@ -2,11 +2,14 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { supabase } = require('./src/lib/supabaseClient')
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Middleware
 app.use(cors());
@@ -35,146 +38,136 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Get all stories
-app.get('/api/stories', async (req, res) => {
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('stories')
-      .select('id, title, content, turns, created_at, updated_at')
-      .order('updated_at', { ascending: false })
+    const { username, email, password } = req.body;
 
-    if (error) throw error
-    res.json(data)
+    // Validation
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Alla fält måste fyllas i' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Lösenordet måste vara minst 6 tecken' });
+    }
+
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .or(`email.eq.${email},username.eq.${username}`)
+      .maybeSingle();
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Användarnamn eller email redan använt' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert([{ username, email, password: hashedPassword }])
+      .select('id, username, email, created_at')
+      .single();
+
+    if (error) throw error;
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(201).json({ user: newUser, token });
   } catch (error) {
-    console.error('Databastfel:', error)
-    res.status(500).json({ error: error.message })
+    console.error('Register error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Get single story
-app.get('/api/stories/:id', async (req, res) => {
+// Login user
+app.post('/api/auth/login', async (req, res) => {
   try {
-    const { id } = req.params
-    const { data, error } = await supabase
-      .from('stories')
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Användarnamn och lösenord krävs' });
+    }
+
+    // Find user by username or email
+    const { data: user, error } = await supabase
+      .from('users')
       .select('*')
-      .eq('id', id)
-      .maybeSingle()
+      .or(`username.eq.${username},email.eq.${username}`)
+      .maybeSingle();
 
-    if (error) throw error
-    if (!data) return res.status(404).json({ error: 'Berättelse inte funnen' })
-    res.json(data)
+    if (error) throw error;
+    if (!user) {
+      return res.status(401).json({ error: 'Felaktigt användarnamn eller lösenord' });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Felaktigt användarnamn eller lösenord' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Return user without password
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ user: userWithoutPassword, token });
   } catch (error) {
-    console.error('Databastfel:', error)
-    res.status(500).json({ error: error.message })
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Create new story
-app.post('/api/stories', async (req, res) => {
+// Verify JWT token middleware
+function verifyToken(req, res, next) {
   try {
-    const { content } = req.body
-
-    if (!content || content.trim().length === 0) {
-      return res.status(400).json({ error: 'Innehål kan inte vara tomt' })
+    const auth = req.headers.authorization || '';
+    const parts = auth.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      return res.status(401).json({ error: 'Token saknas eller fel format' });
     }
+    const token = parts[1];
 
-    if (content.length > 500) {
-      return res.status(400).json({ error: 'Max 500 tecken per tur' })
-    }
-
-    const id = uuidv4()
-    const title = `Story ${new Date().toLocaleDateString('sv-SE')} - ${id.slice(0, 8)}`
-
-    const { data, error } = await supabase
-      .from('stories')
-      .insert([{ id, title, content, turns: 1 }])
-      .select()
-      .single()
-
-    if (error) throw error
-    res.status(201).json(data)
-  } catch (error) {
-    console.error('Databastfel:', error)
-    res.status(500).json({ error: error.message })
-  }
-});
-
-// Continue story
-app.post('/api/stories/:id/continue', async (req, res) => {
-  try {
-    const { id } = req.params
-    const { content } = req.body
-
-    if (!content || content.trim().length === 0) {
-      return res.status(400).json({ error: 'Innehål kan inte vara tomt' })
-    }
-
-    if (content.length > 500) {
-      return res.status(400).json({ error: 'Max 500 tecken per tur' })
-    }
-
-    const { data: story, error: getErr } = await supabase
-      .from('stories')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle()
-
-    if (getErr) throw getErr
-    if (!story) return res.status(404).json({ error: 'Berättelse inte funnen' })
-
-    const updatedContent = (story.content || '') + '\n\n' + content
-    const newTurns = (story.turns || 0) + 1
-
-    const { data, error: updErr } = await supabase
-      .from('stories')
-      .update({ content: updatedContent, turns: newTurns })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (updErr) throw updErr
-    res.json(data)
-  } catch (error) {
-    console.error('Databastfel:', error)
-    res.status(500).json({ error: error.message })
-  }
-});
-
-// Verify Supabase access token middleware
-async function verifySupabaseToken(req, res, next) {
-  try {
-    const auth = req.headers.authorization || ''
-    const parts = auth.split(' ')
-    if (parts.length !== 2 || parts[0] !== 'Bearer') return res.status(401).json({ error: 'Token saknas eller fel format' })
-    const token = parts[1]
-
-    // Use Supabase auth to get user from access token
-    const { data, error } = await supabase.auth.getUser(token)
-    if (error) {
-      console.warn('Supabase getUser error', error)
-      return res.status(401).json({ error: 'Ogiltig eller utgången token' })
-    }
-    if (!data || !data.user) return res.status(401).json({ error: 'Ogiltig token' })
-    req.user = data.user
-    next()
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ error: 'Ogiltig eller utgången token' });
+      }
+      req.userId = decoded.userId;
+      req.username = decoded.username;
+      next();
+    });
   } catch (err) {
-    console.error('verifySupabaseToken error', err)
-    return res.status(500).json({ error: 'Autentiseringsfel' })
+    console.error('verifyToken error', err);
+    return res.status(500).json({ error: 'Autentiseringsfel' });
   }
 }
 
-// Get current user from Supabase token
-app.get('/api/me', verifySupabaseToken, async (req, res) => {
+// Get current user
+app.get('/api/auth/me', verifyToken, async (req, res) => {
   try {
-    const user = req.user
-    if (!user) return res.status(401).json({ error: 'Ogiltig token' })
-    res.json({ user: { id: user.id, email: user.email, aud: user.aud } })
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, username, email, created_at')
+      .eq('id', req.userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!user) {
+      return res.status(404).json({ error: 'Användare inte funnen' });
+    }
+
+    res.json({ user });
   } catch (error) {
-    console.error('Me error:', error)
-    res.status(500).json({ error: error.message })
+    console.error('Me error:', error);
+    res.status(500).json({ error: error.message });
   }
-})
+});
 
 // Error handling
 app.use((err, req, res, next) => {
