@@ -1,0 +1,27 @@
+GET http://localhost:5000/health
+
+###
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "resttest1",
+  "email": "resttest1@test.se",
+  "password": "password123"
+}
+
+###
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "resttest1",
+  "password": "password123"
+}
+
+###
+GET http://localhost:5000/api/auth/me
+
+###
+GET http://localhost:5000/api/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwMDY1ZWE5NS04YmJlLTQ2NjAtODFiYS0zY2U0MzQyODA5NWYiLCJ1c2VybmFtZSI6InJlc3R0ZXN0MSIsImlhdCI6MTc2OTEyMTMwOCwiZXhwIjoxNzY5NzI2MTA4fQ.q19hpXUjACRyQvR5HgA9lJ5C6wwey2YcdUp3VsREDcU
