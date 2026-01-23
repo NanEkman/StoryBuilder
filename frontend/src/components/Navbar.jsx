@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import { User, LogOut, UserCircle } from 'lucide-react'
+import { User, LogOut, UserCircle, BookOpen } from 'lucide-react'
 
 export function Navbar() {
   const navigate = useNavigate()
@@ -60,6 +60,13 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4">
+          {user && (
+            <Button variant="ghost" onClick={() => navigate('/stories')}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              Stories
+            </Button>
+          )}
+          
           <ThemeToggle />
           
           {user ? (
@@ -78,17 +85,17 @@ export function Navbar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/account')}>
                   <UserCircle className="mr-2 h-4 w-4" />
-                  Min profil
+                  My Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Logga ut
+                  Log Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Button onClick={() => navigate('/auth')} variant="default">
-              Logga in
+              Log In
             </Button>
           )}
         </div>
