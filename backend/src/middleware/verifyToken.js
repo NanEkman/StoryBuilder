@@ -17,6 +17,8 @@ function verifyToken(req, res, next) {
       }
       req.userId = decoded.userId;
       req.username = decoded.username;
+      // Backwards-compatible: attach a `user` object with `id` and `username`
+      req.user = { id: decoded.userId, username: decoded.username };
       next();
     });
   } catch (err) {

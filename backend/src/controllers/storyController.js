@@ -1,4 +1,4 @@
-const supabase = require('../lib/supabaseClient');
+const { supabase } = require('../lib/supabaseClient');
 
 // Skapa en ny story
 exports.createStory = async (req, res) => {
