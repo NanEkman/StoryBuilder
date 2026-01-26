@@ -2,16 +2,18 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 const createExpressApp = require("./config/express");
+
 const authRoutes = require("./routes/authRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const storyRoutes = require("./routes/storyRoutes");
+const userHistoryRoutes = require("./routes/userHistoryRoutes").default || require("./routes/userHistoryRoutes");
 
 const app = createExpressApp();
 const PORT = process.env.PORT || 5000;
 
+
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/stories", storyRoutes);
 app.use("/", healthRoutes);
 
 // Error handling
