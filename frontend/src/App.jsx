@@ -6,6 +6,7 @@ import Account from './pages/Account'
 import Stories from './pages/Stories'
 import CreateStory from './pages/CreateStory'
 import StoryDetail from './pages/StoryDetail'
+import UserHistory from './pages/UserHistory'
 import { Navbar } from './components/Navbar'
 import { ThemeProvider } from './components/ThemeProvider'
 
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="/stories" element={<Stories />} />
             <Route path="/stories/create" element={<CreateStory />} />
             <Route path="/stories/:id" element={<StoryDetail />} />
+            <Route path="/history" element={<UserHistory />} />
           </Routes>
         </div>
       </BrowserRouter>
