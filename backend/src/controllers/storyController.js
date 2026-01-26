@@ -1,5 +1,5 @@
-// const supabase = require('../lib/supabaseClient');
 const { supabase } = require("../lib/supabaseClient");
+const { addUserHistory } = require("../services/userHistoryService");
 
 function ensureSupabase(res) {
   if (!supabase) {
@@ -45,6 +45,21 @@ exports.createStory = async (req, res) => {
       .single();
 
     if (storyError) throw storyError;
+
+    // Logga User History
+    try {
+      await addUserHistory({
+        user_id: creator_id,
+        action: "STORY_CREATED",
+        details: {
+          storyId: story.id,
+          title: story.title,
+          isPublic: story.is_public,
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (STORY_CREATED):", e.message);
+    }
 
     // Om det finns inbjudna användare, skapa invites
     if (invited_users && Array.isArray(invited_users) && invited_users.length > 0) {
@@ -360,6 +375,22 @@ exports.contributeToStory = async (req, res) => {
 
     if (contribError) throw contribError;
 
+    // logga user hirstory
+        // Logga user history
+    try {
+      await addUserHistory({
+        user_id,
+        action: "STORY_CONTRIBUTED",
+        details: {
+          storyId: id,
+          contributionId: contribution.id,
+          order: contribution.contribution_order,
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (STORY_CONTRIBUTED):", e.message);
+    }
+
     // Update story updated_at
     await supabase
       .from('stories')
@@ -406,6 +437,17 @@ exports.completeStory = async (req, res) => {
       .single();
 
     if (updateError) throw updateError;
+
+    // logga user history
+    try {
+      await addUserHistory({
+        user_id,
+        action: "STORY_COMPLETED",
+        details: { storyId: id, title: updatedStory?.title },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (STORY_COMPLETED):", e.message);
+    }
 
     res.json({ story: updatedStory });
   } catch (error) {
@@ -457,7 +499,22 @@ exports.inviteToStory = async (req, res) => {
 
     if (inviteError) throw inviteError;
 
+    try {
+      await addUserHistory({
+        user_id: inviter_id,
+        action: "INVITE_SENT",
+        details: {
+          storyId: id,
+          invitedUserIds: user_ids,   // från req.body
+          count: user_ids.length,
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (INVITE_SENT):", e.message);
+    }
+
     res.status(201).json({ invites: createdInvites });
+    
   } catch (error) {
     console.error('Invite to story error:', error);
     res.status(500).json({ error: error.message });
@@ -483,6 +540,19 @@ exports.acceptInvite = async (req, res) => {
     if (error) throw error;
     if (!invite) {
       return res.status(404).json({ error: "Invitation not found" });
+    }
+
+    try {
+      await addUserHistory({
+        user_id,
+        action: "INVITE_ACCEPTED",
+        details: {
+          inviteId: id,
+          storyId: invite.story_id, // kräver att story_id finns i select-resultatet
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (INVITE_ACCEPTED):", e.message);
     }
 
     res.json({ invite });

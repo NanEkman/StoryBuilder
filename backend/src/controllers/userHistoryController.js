@@ -29,3 +29,16 @@ export async function getUserHistoryByUser(req, res) {
     return res.status(500).json({ error: error?.message ?? "Server error" });
   }
 }
+
+export async function getMyUserHistory(req, res) {
+  try {
+    const user_id = req.userId;
+    if (!user_id) return res.status(401).json({ error: "Not authenticated" });
+
+    const data = await getUserHistory(user_id);
+    return res.status(200).json({ history: data || [] });
+  } catch (error) {
+    return res.status(500).json({ error: error?.message ?? "Server error" });
+  }
+}
+
