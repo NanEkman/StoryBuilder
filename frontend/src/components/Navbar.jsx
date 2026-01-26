@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import { User, LogOut, UserCircle, BookOpen } from 'lucide-react'
+import { User, LogOut, UserCircle, BookOpen, History } from 'lucide-react'
 
 export function Navbar() {
   const navigate = useNavigate()
@@ -86,6 +86,10 @@ export function Navbar() {
                 <DropdownMenuItem onClick={() => navigate('/account')}>
                   <UserCircle className="mr-2 h-4 w-4" />
                   My Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/history')}>
+                  <History className="mr-2 h-4 w-4" />
+                  My History
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />

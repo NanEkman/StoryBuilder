@@ -1,10 +1,23 @@
-const supabase = require('../lib/supabaseClient');
+const { supabase } = require("../lib/supabaseClient");
+const { addUserHistory } = require("../services/userHistoryService");
+
+function ensureSupabase(res) {
+  if (!supabase) {
+    res.status(500).json({
+      error: "Supabase client is not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+    });
+    return false;
+  }
+  return true;
+}
 
 // Skapa en ny story
 exports.createStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { title, initial_content, is_public, invited_users } = req.body;
-    const creator_id = req.user.id;
+    // const creator_id = req.user.id;
+    const creator_id = req.userId;
 
     // Validation
     if (!title || title.trim().length < 3) {
@@ -33,6 +46,21 @@ exports.createStory = async (req, res) => {
 
     if (storyError) throw storyError;
 
+    // Logga User History
+    try {
+      await addUserHistory({
+        user_id: creator_id,
+        action: "STORY_CREATED",
+        details: {
+          storyId: story.id,
+          title: story.title,
+          isPublic: story.is_public,
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (STORY_CREATED):", e.message);
+    }
+
     // Om det finns inbjudna användare, skapa invites
     if (invited_users && Array.isArray(invited_users) && invited_users.length > 0) {
       const invites = invited_users.map(user_id => ({
@@ -59,8 +87,9 @@ exports.createStory = async (req, res) => {
 
 // Hämta publika stories (som användaren inte skapat och inte är avslutade)
 exports.getPublicStories = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     const { data: stories, error } = await supabase
       .from('stories')
@@ -96,8 +125,9 @@ exports.getPublicStories = async (req, res) => {
 
 // Hämta privata stories (där användaren är inbjuden eller creator)
 exports.getPrivateStories = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Hämta stories där användaren är creator
     const { data: createdStories, error: createdError } = await supabase
@@ -148,8 +178,9 @@ exports.getPrivateStories = async (req, res) => {
 
 // Hämta avslutade stories där användaren har bidragit
 exports.getCompletedStories = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Hämta alla contributions från användaren
     const { data: userContributions, error: contribError } = await supabase
@@ -187,9 +218,10 @@ exports.getCompletedStories = async (req, res) => {
 
 // Hämta en specifik story med alla contributions
 exports.getStoryById = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Get story
     const { data: story, error: storyError } = await supabase
@@ -260,10 +292,11 @@ exports.getStoryById = async (req, res) => {
 
 // Bidra till en story
 exports.contributeToStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
     const { content } = req.body;
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Validation
     if (!content || content.trim().length < 10) {
@@ -342,6 +375,22 @@ exports.contributeToStory = async (req, res) => {
 
     if (contribError) throw contribError;
 
+    // logga user hirstory
+        // Logga user history
+    try {
+      await addUserHistory({
+        user_id,
+        action: "STORY_CONTRIBUTED",
+        details: {
+          storyId: id,
+          contributionId: contribution.id,
+          order: contribution.contribution_order,
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (STORY_CONTRIBUTED):", e.message);
+    }
+
     // Update story updated_at
     await supabase
       .from('stories')
@@ -357,9 +406,10 @@ exports.contributeToStory = async (req, res) => {
 
 // Markera story som avslutad
 exports.completeStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Get story
     const { data: story, error: storyError } = await supabase
@@ -388,6 +438,17 @@ exports.completeStory = async (req, res) => {
 
     if (updateError) throw updateError;
 
+    // logga user history
+    try {
+      await addUserHistory({
+        user_id,
+        action: "STORY_COMPLETED",
+        details: { storyId: id, title: updatedStory?.title },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (STORY_COMPLETED):", e.message);
+    }
+
     res.json({ story: updatedStory });
   } catch (error) {
     console.error('Complete story error:', error);
@@ -397,10 +458,11 @@ exports.completeStory = async (req, res) => {
 
 // Bjud in användare till en story
 exports.inviteToStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
     const { user_ids } = req.body;
-    const inviter_id = req.user.id;
+    const inviter_id = req.userId;
 
     if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
       return res.status(400).json({ error: "You must specify at least one user to invite" });
@@ -437,7 +499,22 @@ exports.inviteToStory = async (req, res) => {
 
     if (inviteError) throw inviteError;
 
+    try {
+      await addUserHistory({
+        user_id: inviter_id,
+        action: "INVITE_SENT",
+        details: {
+          storyId: id,
+          invitedUserIds: user_ids,   // från req.body
+          count: user_ids.length,
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (INVITE_SENT):", e.message);
+    }
+
     res.status(201).json({ invites: createdInvites });
+    
   } catch (error) {
     console.error('Invite to story error:', error);
     res.status(500).json({ error: error.message });
@@ -446,9 +523,10 @@ exports.inviteToStory = async (req, res) => {
 
 // Acceptera en inbjudan
 exports.acceptInvite = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params; // invite id
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Update invite
     const { data: invite, error } = await supabase
@@ -464,6 +542,19 @@ exports.acceptInvite = async (req, res) => {
       return res.status(404).json({ error: "Invitation not found" });
     }
 
+    try {
+      await addUserHistory({
+        user_id,
+        action: "INVITE_ACCEPTED",
+        details: {
+          inviteId: id,
+          storyId: invite.story_id, // kräver att story_id finns i select-resultatet
+        },
+      });
+    } catch (e) {
+      console.warn("user_history log failed (INVITE_ACCEPTED):", e.message);
+    }
+
     res.json({ invite });
   } catch (error) {
     console.error('Accept invite error:', error);
@@ -473,8 +564,9 @@ exports.acceptInvite = async (req, res) => {
 
 // Hämta användarens inbjudningar
 exports.getMyInvites = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     const { data: invites, error } = await supabase
       .from('story_invites')

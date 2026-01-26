@@ -15,6 +15,9 @@ const PORT = process.env.PORT || 5000;
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/", healthRoutes);
+app.use("/api/stories", storyRoutes);
+app.use("/api/user-history", userHistoryRoutes);
+
 
 // Error handling
 app.use((err, req, res, next) => {
