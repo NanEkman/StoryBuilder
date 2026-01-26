@@ -2,21 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  :root {
+    --background: 45 11% 89%;
+    --foreground: 210 11% 15%;
+    --card: 45 11% 89%;
+    --card-foreground: 210 11% 15%;
+    --popover: 45 11% 89%;
+    --popover-foreground: 210 11% 15%;
+    --primary: 35 15% 55%;
+    --primary-foreground: 45 11% 89%;
+    --secondary: 210 9% 31%;
+    --secondary-foreground: 45 11% 89%;
+    --muted: 35 15% 75%;
+    --muted-foreground: 210 9% 31%;
+    --accent: 35 15% 55%;
+    --accent-foreground: 210 11% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 9% 31%;
+    --input: 210 9% 31%;
+    --ring: 35 15% 55%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 210 11% 15%;
+    --foreground: 45 11% 89%;
+    --card: 210 9% 22%;
+    --card-foreground: 45 11% 89%;
+    --popover: 210 9% 22%;
+    --popover-foreground: 45 11% 89%;
+    --primary: 35 15% 55%;
+    --primary-foreground: 210 11% 15%;
+    --secondary: 210 9% 31%;
+    --secondary-foreground: 45 11% 89%;
+    --muted: 210 9% 22%;
+    --muted-foreground: 35 15% 75%;
+    --accent: 210 9% 22%;
+    --accent-foreground: 45 11% 89%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 9% 31%;
+    --input: 210 9% 31%;
+    --ring: 35 15% 55%;
+  }
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
