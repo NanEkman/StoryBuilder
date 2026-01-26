@@ -1,10 +1,23 @@
-const supabase = require('../lib/supabaseClient');
+// const supabase = require('../lib/supabaseClient');
+const { supabase } = require("../lib/supabaseClient");
+
+function ensureSupabase(res) {
+  if (!supabase) {
+    res.status(500).json({
+      error: "Supabase client is not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+    });
+    return false;
+  }
+  return true;
+}
 
 // Skapa en ny story
 exports.createStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { title, initial_content, is_public, invited_users } = req.body;
-    const creator_id = req.user.id;
+    // const creator_id = req.user.id;
+    const creator_id = req.userId;
 
     // Validation
     if (!title || title.trim().length < 3) {
@@ -59,8 +72,9 @@ exports.createStory = async (req, res) => {
 
 // Hämta publika stories (som användaren inte skapat och inte är avslutade)
 exports.getPublicStories = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     const { data: stories, error } = await supabase
       .from('stories')
@@ -96,8 +110,9 @@ exports.getPublicStories = async (req, res) => {
 
 // Hämta privata stories (där användaren är inbjuden eller creator)
 exports.getPrivateStories = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Hämta stories där användaren är creator
     const { data: createdStories, error: createdError } = await supabase
@@ -148,8 +163,9 @@ exports.getPrivateStories = async (req, res) => {
 
 // Hämta avslutade stories där användaren har bidragit
 exports.getCompletedStories = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Hämta alla contributions från användaren
     const { data: userContributions, error: contribError } = await supabase
@@ -187,9 +203,10 @@ exports.getCompletedStories = async (req, res) => {
 
 // Hämta en specifik story med alla contributions
 exports.getStoryById = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Get story
     const { data: story, error: storyError } = await supabase
@@ -260,10 +277,11 @@ exports.getStoryById = async (req, res) => {
 
 // Bidra till en story
 exports.contributeToStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
     const { content } = req.body;
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Validation
     if (!content || content.trim().length < 10) {
@@ -357,9 +375,10 @@ exports.contributeToStory = async (req, res) => {
 
 // Markera story som avslutad
 exports.completeStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Get story
     const { data: story, error: storyError } = await supabase
@@ -397,10 +416,11 @@ exports.completeStory = async (req, res) => {
 
 // Bjud in användare till en story
 exports.inviteToStory = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params;
     const { user_ids } = req.body;
-    const inviter_id = req.user.id;
+    const inviter_id = req.userId;
 
     if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
       return res.status(400).json({ error: "You must specify at least one user to invite" });
@@ -446,9 +466,10 @@ exports.inviteToStory = async (req, res) => {
 
 // Acceptera en inbjudan
 exports.acceptInvite = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
     const { id } = req.params; // invite id
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     // Update invite
     const { data: invite, error } = await supabase
@@ -473,8 +494,9 @@ exports.acceptInvite = async (req, res) => {
 
 // Hämta användarens inbjudningar
 exports.getMyInvites = async (req, res) => {
+  if (!ensureSupabase(res)) return;
   try {
-    const user_id = req.user.id;
+    const user_id = req.userId;
 
     const { data: invites, error } = await supabase
       .from('story_invites')
